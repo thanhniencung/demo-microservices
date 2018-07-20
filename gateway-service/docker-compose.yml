@@ -1,0 +1,56 @@
+##################################################################
+#              Docker Compose file that starts Kong              #
+##################################################################
+
+version: '2'
+
+services:
+  kong-database:
+    image: postgres:9.4
+    container_name: kong-database
+    ports:
+      - 5432
+    environment:
+      - POSTGRES_USER=kong
+      - POSTGRES_DB=kong
+    volumes:
+      - "db-data-kong-postgres:/var/lib/postgresql/data"
+  kong:
+    image: kong:0.11.2
+    container_name: kong
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database
+      - LC_CTYPE=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+    restart: always
+    command: bash -c "kong migrations up && kong start"
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "7946:7946"
+      - "7946:7946/udp"
+    depends_on:
+      - kong-database
+    links:
+      - kong-database
+
+  kong-dashboard:
+    container_name: kong-dashboard
+    image: pgbi/kong-dashboard:v2
+    ports:
+      - 8080:8080
+    environment:
+      - KONG_URL=http://kong:8001
+
+  konga:
+    container_name: konga
+    build:
+      context: ./konga
+    image: konga:1.0
+    ports:
+          - 1337:1337
+
+volumes:
+  db-data-kong-postgres:
